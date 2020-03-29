@@ -1,0 +1,20 @@
+== Async WASM
+Golang WASM oriented library-adaptor for JavaScript.
+
+Golang 1.4 version is not support multi-thread development pattern at all (chanel usage can bring application to dead-lock) and only one way to develop `WASM` useful application is to utilize power of js Promise.
+
+== Environment
+Library developed only for followed compilation requirements:
+
+* `GOARCH=wasm`
+* `GOOS=js`
+* build tags: `js, wasm`
+
+EXAMPLE:
+[source,bash]
+----
+$ GOARCH=wasm GOOS=js go build -tags js,wasm -o lib.wasm main.go
+----
+
+== MIT License
+
