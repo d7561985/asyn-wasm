@@ -16,5 +16,12 @@ EXAMPLE:
 $ GOARCH=wasm GOOS=js go build -tags js,wasm -o lib.wasm main.go
 ----
 
+== Implemented
+* [ ] Promise
+* [ ] WebSocket
+
+
+
+
 == MIT License
 
