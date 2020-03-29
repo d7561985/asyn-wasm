@@ -24,12 +24,12 @@ func NewPromise() *Promise {
 	return out
 }
 
-// Resolve promise
+// resolve promise
 func (p *Promise) Resolve(res interface{}) {
 	p.resolve.Invoke(res)
 }
 
-// Reject promise
+// reject promise
 func (p *Promise) Reject(res interface{}) {
 	p.reject.Invoke(res)
 }

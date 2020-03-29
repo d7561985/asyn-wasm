@@ -42,28 +42,17 @@ type WebSocket struct {
 	reconnect bool
 }
 
-func (w *WebSocket) Reject(reason interface{}, clean bool) {
-	if w.promise == nil {
-		return
-	}
-
-	w.promise.Reject(reason)
-
-	if clean {
-		w.promise = nil
-	}
+// NewWebSocket create JS WebSocket adapter
+// @host - URI with wss:// or ws:// format
+// @reconnect - enable reconnection operation during close connection or during send attempt to closed connection
+func NewWebSocket(host string, reconnect bool) *WebSocket {
+	return &WebSocket{host: host, reconnect: reconnect}
 }
 
-func (w *WebSocket) Resolve(result interface{}, clean bool) {
-	if w.promise == nil {
-		return
-	}
-
-	w.promise.Resolve(result)
-
-	if clean {
-		w.promise = nil
-	}
+// Connect evaluate connection operation to provided host
+// @return JS Promise where would be send connection result
+func (w *WebSocket) Connect() js.Value {
+	return w.open()
 }
 
 func (w *WebSocket) open() js.Value {
@@ -82,17 +71,17 @@ func (w *WebSocket) open() js.Value {
 
 		var out interface{}
 		if err := json.Unmarshal([]byte(jsBlob.String()), &out); err != nil {
-			w.Reject(err.Error(), true)
+			w.reject(err.Error(), true)
 			return nil
 		}
 
-		w.Resolve(out, true)
+		w.resolve(out, true)
 
 		return nil
 	}))
 
 	ws.Call(jsref.AddEventListener, wsEventClose, js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-		w.Reject(fmt.Errorf("ws is closed"), true)
+		w.reject(fmt.Errorf("ws is closed"), true)
 
 		if w.reconnect {
 			w.open()
@@ -102,10 +91,11 @@ func (w *WebSocket) open() js.Value {
 	}))
 
 	ws.Call(jsref.AddEventListener, wsEventError, js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-		w.Reject(fmt.Errorf("ws error: [%v]", args), true)
+		w.reject(fmt.Errorf("ws error: [%v]", args), true)
 
 		if conPromise != nil {
 			conPromise.Reject(fmt.Errorf("ws error: [%v]", args))
+			conPromise = nil
 		}
 
 		return nil
@@ -148,4 +138,28 @@ func (w *WebSocket) Send(msg string) js.Value {
 	}
 
 	return promise.JSValue()
+}
+
+func (w *WebSocket) resolve(result interface{}, clean bool) {
+	if w.promise == nil {
+		return
+	}
+
+	w.promise.Resolve(result)
+
+	if clean {
+		w.promise = nil
+	}
+}
+
+func (w *WebSocket) reject(reason interface{}, clean bool) {
+	if w.promise == nil {
+		return
+	}
+
+	w.promise.Reject(reason)
+
+	if clean {
+		w.promise = nil
+	}
 }
