@@ -10,6 +10,7 @@ Library developed only for followed compilation requirements:
 * `GOOS=js`
 * build tags: `js, wasm`
 
+
 EXAMPLE:
 [source,bash]
 ----
@@ -21,7 +22,11 @@ $ GOARCH=wasm GOOS=js go build -tags js,wasm -o lib.wasm main.go
 * [ ] WebSocket
 
 
+== Similar projects
+* https://github.com/dennwc/dom
+* https://github.com/dominikh/go-js-dom
+* https://github.com/nhooyr/websocket
 
 
 == MIT License
-
+See the <<LICENSE#,LICENSE>>.

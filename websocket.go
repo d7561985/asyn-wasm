@@ -1,3 +1,5 @@
+// +build js, wasm
+
 package asyn_wasm
 
 import (
@@ -51,18 +53,14 @@ func NewWebSocket(host string, reconnect bool) *WebSocket {
 
 // Connect evaluate connection operation to provided host
 // @return JS Promise where would be send connection result
-func (w *WebSocket) Connect() js.Value {
-	return w.open()
+func (w *WebSocket) Connect() {
+	w.open()
 }
 
-func (w *WebSocket) open() js.Value {
-	conPromise := NewPromise()
+func (w *WebSocket) open() {
 	ws := js.Global().Get(jsref.JSGlobalClassWebSocket).New(w.host)
 
 	ws.Call(jsref.AddEventListener, wsEventOpen, js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-		conPromise.Resolve(nil)
-		conPromise = nil
-
 		return nil
 	}))
 
@@ -81,7 +79,7 @@ func (w *WebSocket) open() js.Value {
 	}))
 
 	ws.Call(jsref.AddEventListener, wsEventClose, js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-		w.reject(fmt.Errorf("ws is closed"), true)
+		w.reject("ws is closed", true)
 
 		if w.reconnect {
 			w.open()
@@ -91,20 +89,12 @@ func (w *WebSocket) open() js.Value {
 	}))
 
 	ws.Call(jsref.AddEventListener, wsEventError, js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-		w.reject(fmt.Errorf("ws error: [%v]", args), true)
-
-		if conPromise != nil {
-			conPromise.Reject(fmt.Errorf("ws error: [%v]", args))
-			conPromise = nil
-		}
-
+		w.reject(fmt.Sprintf("ws error: [%v]", args), true)
 		return nil
 	}))
 
 	w.ws = &ws
 	w.promise = nil
-
-	return conPromise.JSValue()
 }
 
 func (w *WebSocket) ReadyState() int {
@@ -127,12 +117,6 @@ func (w *WebSocket) Send(msg string) js.Value {
 		w.ws.Call(wsFunctionSend, js.ValueOf(msg))
 	case status == WsClosed || status == WsClosing:
 		promise.Reject("ws closed")
-
-		// ToDo: we can save our message and link to the promise of open connection
-		// but here should add support async send message or something similar.
-		if w.reconnect {
-			_ = w.open()
-		}
 	case status == WsConnecting:
 		promise.Reject("ws has status connecting...")
 	}
