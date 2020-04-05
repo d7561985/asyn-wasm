@@ -1,5 +1,3 @@
-// +build js, wasm
-
 package asyn_wasm
 
 import (
@@ -53,14 +51,18 @@ func NewWebSocket(host string, reconnect bool) *WebSocket {
 
 // Connect evaluate connection operation to provided host
 // @return JS Promise where would be send connection result
-func (w *WebSocket) Connect() {
-	w.open()
+func (w *WebSocket) Connect() js.Value {
+	return w.open()
 }
 
-func (w *WebSocket) open() {
+func (w *WebSocket) open() js.Value {
+	w.promise = NewPromise()
 	ws := js.Global().Get(jsref.JSGlobalClassWebSocket).New(w.host)
 
 	ws.Call(jsref.AddEventListener, wsEventOpen, js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		w.promise.Resolve(nil)
+		w.promise = nil
+
 		return nil
 	}))
 
@@ -89,12 +91,19 @@ func (w *WebSocket) open() {
 	}))
 
 	ws.Call(jsref.AddEventListener, wsEventError, js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-		w.reject(fmt.Sprintf("ws error: [%v]", args), true)
+		w.reject(fmt.Errorf("ws error: [%v]", args), true)
+
+		if w.promise != nil {
+			w.promise.Reject(fmt.Sprintf("ws error: [%v]", args))
+			w.promise = nil
+		}
+
 		return nil
 	}))
 
 	w.ws = &ws
-	w.promise = nil
+
+	return w.promise.JSValue()
 }
 
 func (w *WebSocket) ReadyState() int {
