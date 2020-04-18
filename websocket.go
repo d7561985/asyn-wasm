@@ -1,3 +1,5 @@
+// +build js,wasm
+
 package asyn_wasm
 
 import (
