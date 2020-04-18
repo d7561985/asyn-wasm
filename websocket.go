@@ -30,6 +30,8 @@ const (
 	WsClosed     = 3
 )
 
+type MsgCallBack func(string) (interface{}, error)
+
 // WebSocket represent ws JavaScript adapter
 // https://developer.mozilla.org/en-US/docs/Web/API/WebSocket
 type WebSocket struct {
@@ -40,13 +42,21 @@ type WebSocket struct {
 
 	// reconnect allow reconnect operation on close
 	reconnect bool
+
+	collBack MsgCallBack
 }
 
 // NewWebSocket create JS WebSocket adapter
 // @host - URI with wss:// or ws:// format
 // @reconnect - enable reconnection operation during close connection or during send attempt to closed connection
-func NewWebSocket(host string, reconnect bool) *WebSocket {
-	return &WebSocket{host: host, reconnect: reconnect}
+func NewWebSocket(host string, reconnect bool, cb MsgCallBack) *WebSocket {
+	res := &WebSocket{host: host, reconnect: reconnect, collBack: defaultCallBack}
+
+	if cb != nil {
+		res.collBack = cb
+	}
+
+	return res
 }
 
 // Connect evaluate connection operation to provided host
@@ -69,8 +79,8 @@ func (w *WebSocket) open() js.Value {
 	ws.Call(jsref.AddEventListener, wsEventMessage, js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		jsBlob := args[0].Get("data")
 
-		var out interface{}
-		if err := json.Unmarshal([]byte(jsBlob.String()), &out); err != nil {
+		out, err := w.collBack(jsBlob.String())
+		if err != nil {
 			w.reject(err.Error(), true)
 			return nil
 		}
@@ -155,4 +165,13 @@ func (w *WebSocket) reject(reason interface{}, clean bool) {
 	if clean {
 		w.promise = nil
 	}
+}
+
+func defaultCallBack(in string) (interface{}, error) {
+	var out interface{}
+	if err := json.Unmarshal([]byte(in), &out); err != nil {
+		return nil, err
+	}
+
+	return out, nil
 }
