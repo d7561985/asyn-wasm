@@ -68,13 +68,14 @@ func (w *WebSocket) Connect() js.Value {
 }
 
 func (w *WebSocket) open() js.Value {
-	w.promise = NewPromise()
+	if w.promise == nil {
+		w.promise = NewPromise()
+	}
+
 	ws := js.Global().Get(jsref.JSGlobalClassWebSocket).New(w.host)
 
 	ws.Call(jsref.AddEventListener, wsEventOpen, js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-		w.promise.Resolve(nil)
-		w.promise = nil
-
+		w.resolve(nil, true)
 		return nil
 	}))
 
@@ -88,28 +89,23 @@ func (w *WebSocket) open() js.Value {
 		}
 
 		w.resolve(out, true)
-
 		return nil
 	}))
 
 	ws.Call(jsref.AddEventListener, wsEventClose, js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-		w.reject("ws is closed", true)
-
 		if w.reconnect {
 			w.open()
+
+			return nil
 		}
+
+		w.reject("ws is closed", true)
 
 		return nil
 	}))
 
 	ws.Call(jsref.AddEventListener, wsEventError, js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-		w.reject(fmt.Errorf("ws error: [%v]", args), true)
-
-		if w.promise != nil {
-			w.promise.Reject(fmt.Sprintf("ws error: [%v]", args))
-			w.promise = nil
-		}
-
+		w.reject(fmt.Sprintf("ws error: [%v]", args[0].String()), true)
 		return nil
 	}))
 
