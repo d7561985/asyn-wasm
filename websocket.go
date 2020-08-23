@@ -105,7 +105,13 @@ func (w *WebSocket) open() js.Value {
 	}))
 
 	ws.Call(jsref.AddEventListener, wsEventError, js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-		w.reject(fmt.Sprintf("ws error: [%v]", args[0].String()), true)
+		if w.ReadyState() == WsOpen || w.reconnect == false {
+			w.reject(fmt.Sprintf("ws error: [%v]", args[0].String()), true)
+			return nil
+		}
+
+		println("WS error: ", args[0].String())
+
 		return nil
 	}))
 
